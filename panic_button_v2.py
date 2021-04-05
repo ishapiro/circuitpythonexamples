@@ -2,7 +2,7 @@
 # Website: https://cogitations.com
 # YouTube Channel: https://youtube.com/c/drvax
 
-# This program is derived from the Twilio example for microPython post
+# This program is derived from the Twilio example for microPython posted
 # at https://www.twilio.com/blog/sms-doorbell-micropython-twilio
 
 # It is also derived from various Adafruit CircuitPython web examples.
