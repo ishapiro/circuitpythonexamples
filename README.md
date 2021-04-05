@@ -1,4 +1,4 @@
-# circuitpythonexamples
+# circuitpython examples
 Examples of Circuit Python Code for the DrVax community.
 
 The DrVAX YouTube channels teaches people how to make thinks by using the rapidly expanding world of desktop and home manufacturing resources.   While the channel has focused on 3d printing and woodworking the explosion of simgle board comptuters easily programmed in pythod open the world of electronics to makers with a range of skills.
