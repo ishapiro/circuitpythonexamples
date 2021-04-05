@@ -33,7 +33,9 @@
 #
 
 # When a button on pin 11 (data 13) is press an API call is
-# placed to Twilio and a text messages is sent.
+# placed to Twilio and a text messages is sent.  The message
+# provided in secrets.py has the current time, based on the
+# device IP address appended to the user provided text.
 
 # This file, secrets.py, is where you keep secret settings, passwords,
 # and tokens! Do not put confidential informatiuon in the code
@@ -49,12 +51,11 @@
 #     'TWILIO_AUTH_TOKEN' : '-------------------------------',
 #     'TWILIO_FROM_NUMBER' : '+13339998888',
 #     'NOTIFICATION_NUMBER' : '+14445557777',
+#     'message',
 #     }
 #
 # Note the telephone numbers must begin with a country code
 
-
-import ipaddress
 import ssl
 import wifi
 import socketpool
@@ -64,26 +65,6 @@ import board
 import digitalio
 import feathers2
 import binascii
-import struct
-from adafruit_datetime import datetime
-
-# Credit for this routine goes to Roland Smith post in StackOverflow Apr 21 '18
-# It converts a Python sting to a Byte String
-def rawbytes(s):
-    """Convert a string to raw bytes without encoding"""
-    outlist = []
-    for cp in s:
-        num = ord(cp)
-        if num < 255:
-            outlist.append(struct.pack("B", num))
-        elif num < 65535:
-            outlist.append(struct.pack(">H", num))
-        else:
-            b = (num & 0xFF0000) >> 16
-            H = num & 0xFFFF
-            outlist.append(struct.pack(">bH", b, H))
-    return b"".join(outlist)
-
 
 # Get passwords and credentials
 print("Loading network passwords")
@@ -118,10 +99,29 @@ class connect_me:
         print("Connected to %s!" % secrets["ssid"])
         print("My IP address is", wifi.radio.ipv4_address)
 
-        ipv4 = ipaddress.ip_address("8.8.4.4")
-        print("Ping google.com: %f ms" % (wifi.radio.ping(ipv4) * 5))
-
         return socketpool.SocketPool(wifi.radio)
+
+
+class get_internet_time:
+    def __init__(self, requestPool):
+        self.requestPool = requestPool
+        self.needRequest = True
+
+    def get_local_time(self):
+        JSON_TIME_URL = "http://worldtimeapi.org/api/ip"
+        # Only setup the request object once
+        if self.needRequest:
+            self.requests = adafruit_requests.Session(
+                self.requestPool, ssl.create_default_context()
+            )
+            self.needRequest = False
+
+        print("Fetching json from", JSON_TIME_URL)
+        response = self.requests.get(JSON_TIME_URL)
+        print("-" * 40)
+        print(response.json())
+        print("-" * 40)
+        return response.json()
 
 
 #
@@ -145,7 +145,7 @@ class TwilioSMS:
         )
 
         # binascii requires a byte arrary instead of a string
-        self.twilioAuthBytes = rawbytes(self.twilioAuthString)
+        self.twilioAuthBytes = bytes(self.twilioAuthString, "utf-8")
 
         # HTTP Authorization requires a string so use decode to change it back.
         # the bsa_base64 method adds a LF on the end so use .strip to remove it
@@ -225,15 +225,22 @@ while True:
         cnt += 1
         print("---------------------------------------------")
         print("Button Pressed: {}".format(cnt))
+
+        # Get the current time from the Internet
+        getTime = get_internet_time(requestPool)
+        # Split the time on a period and take the first part
+        currentTime = getTime.get_local_time()["datetime"].split(".")[0]
+        # Turn the blue led on
         feathers2.led_set(True)
         # Send the SMS
         sms.create(
-            body="Someone is at the door {}".format(datetime.now()),
+            body=secrets["message"] + ": " + currentTime,
             from_=secrets["TWILIO_FROM_NUMBER"],
             to=secrets["NOTIFICATION_NUMBER"],
         )
         waiting_for_button()
     time.sleep(0.1)
+    # turn the blue LED off
     feathers2.led_set(False)
 
 
