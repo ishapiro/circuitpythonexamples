@@ -35,7 +35,7 @@
 # When a button on pin 11 (data 13) is press an API call is
 # placed to Twilio and a text messages is sent.  The message
 # provided in secrets.py has the current time, based on the
-# device IP address appended to the user provided text.
+# device IP address appended to the user provided text
 
 # This file, secrets.py, is where you keep secret settings, passwords,
 # and tokens! Do not put confidential informatiuon in the code
@@ -102,22 +102,37 @@ class connect_me:
         return socketpool.SocketPool(wifi.radio)
 
 
-class get_internet_time:
+#
+# This class obtains a request object from the socket pool which we
+# will reuser since if we keep allocating request objects we run out
+# over time.
+#
+class get_request:
     def __init__(self, requestPool):
         self.requestPool = requestPool
         self.needRequest = True
 
-    def get_local_time(self):
-        JSON_TIME_URL = "http://worldtimeapi.org/api/ip"
+    def get_request_object(self):
         # Only setup the request object once
         if self.needRequest:
+            print("allocating request from pool")
             self.requests = adafruit_requests.Session(
                 self.requestPool, ssl.create_default_context()
             )
             self.needRequest = False
+        return self.requests
+
+
+class get_internet_time:
+    def __init__(self, requestObject):
+        self.requestObject = requestObject
+        self.needRequest = True
+
+    def get_local_time(self):
+        JSON_TIME_URL = "http://worldtimeapi.org/api/ip"
 
         print("Fetching json from", JSON_TIME_URL)
-        response = self.requests.get(JSON_TIME_URL)
+        response = self.requestObject.get(JSON_TIME_URL)
         print("-" * 40)
         print(response.json())
         print("-" * 40)
@@ -153,8 +168,7 @@ class TwilioSMS:
             binascii.b2a_base64(self.twilioAuthBytes).strip().decode("ascii")
         )
 
-        self.requestPool = requestPool
-        self.needRequest = True
+        self.requestObject = requestObject
 
     def create(self, body, from_, to):
 
@@ -169,20 +183,13 @@ class TwilioSMS:
             "From": fromHTTP,
         }
 
-        # Only setup the request object once
-        if self.needRequest:
-            self.requests = adafruit_requests.Session(
-                self.requestPool, ssl.create_default_context()
-            )
-            self.needRequest = False
-
         # Use HTTP basic authorization
         headersHTTP = {"Authorization": "Basic %s" % self.twilio_auth}
         print(self.twilio_auth)
         print("-- ")
         print(headersHTTP)
 
-        r = self.requests.post(
+        r = self.requestObject.post(
             "https://api.twilio.com/2010-04-01/"
             + "Accounts/"
             + self.twilio_account_sid
@@ -206,6 +213,7 @@ def waiting_for_button():
 # -----------------------
 
 requestPool = connect_me.connect_wifi()
+requestObject = get_request(requestPool).get_request_object()
 
 # set up button
 button_a = digitalio.DigitalInOut(board.D13)
@@ -215,7 +223,7 @@ cnt = 0
 
 # Set up the Twilio REST API Call
 sms = TwilioSMS(
-    requestPool, secrets["TWILIO_ACCOUNT_SID"], secrets["TWILIO_AUTH_TOKEN"]
+    requestObject, secrets["TWILIO_ACCOUNT_SID"], secrets["TWILIO_AUTH_TOKEN"]
 )
 
 waiting_for_button()
@@ -227,7 +235,7 @@ while True:
         print("Button Pressed: {}".format(cnt))
 
         # Get the current time from the Internet
-        getTime = get_internet_time(requestPool)
+        getTime = get_internet_time(requestObject)
         # Split the time on a period and take the first part
         currentTime = getTime.get_local_time()["datetime"].split(".")[0]
         # Turn the blue led on
