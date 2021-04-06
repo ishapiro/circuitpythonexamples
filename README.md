@@ -5,6 +5,6 @@ The DrVAX YouTube channels teaches people how to make thinks by using the rapidl
 
 There are currently two programs in the repository for working with the AdaFruit FeatherS2.
 
-feather_buitton_test.py is a simple program that demonstrates how to use the two programable LEDs on the board and how to attache a button wired to the board as indicated in the diagram "featherS2 Circuit Diagram.png"
+feathers2_button_test.py is a simple program that demonstrates how to use the two programable LEDs on the board and how to attache a button wired to the board as indicated in the diagram "featherS2 Circuit Diagram.png"
 
 feathers2_sma_button implements the "Magic SMS Button" soon to be described in an Instructables tutorial and in a video on the DrVAX YouTube channel. This program is an example of how to build a door bell or panic alarm for a senior with just a couple of components and a few lines of code. This example uses an Adafruit FeatherS2, CircuitPython and Twilio.  The code utilizes the Circuit Python wifi, socketpool and adafruit_requests libraries.
