@@ -134,9 +134,12 @@ class get_internet_time:
         print("Fetching json from", JSON_TIME_URL)
         response = self.requestObject.get(JSON_TIME_URL)
         print("-" * 40)
-        print(response.json())
-        print("-" * 40)
-        return response.json()
+        print(response.status_code)
+        if response.status_code == 200:
+            print(response.json())
+            print("-" * 40)
+            return response.json()
+        return {"datetime": "time unavailable."}
 
 
 #
