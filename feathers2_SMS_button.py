@@ -63,8 +63,8 @@ import adafruit_requests
 import time
 import board
 import digitalio
-import feathers2
 import binascii
+import adafruit_dotstar
 
 # Get passwords and credentials
 print("Loading network passwords")
@@ -211,9 +211,33 @@ def waiting_for_button():
     print("---------------------------------------------")
 
 
+class dotstar:
+    def __init__(self):
+        # Turn off the bright LED called a DotStar
+        self.dotstar = adafruit_dotstar.DotStar(
+            board.APA102_SCK, board.APA102_MOSI, 1, brightness=255.0, auto_write=True
+        )
+        self.dotstar[0] = (0, 0, 0, 0.0)
+
+    def red(self):
+        self.dotstar[0] = (255, 0, 0, 10.0)
+
+    def green(self):
+        self.dotstar[0] = (0, 255, 0, 10.0)
+
+    def blue(self):
+        self.dotstar[0] = (0, 0, 255, 10.0)
+
+    def off(self):
+        self.dotstar[0] = (0, 0, 0, 0.0)
+
+
 # -----------------------
 # Main Code Starts Here
 # -----------------------
+#
+myDot = dotstar()
+myDot.off()
 
 requestPool = connect_me.connect_wifi()
 requestObject = get_request(requestPool).get_request_object()
@@ -229,6 +253,8 @@ sms = TwilioSMS(
     requestObject, secrets["TWILIO_ACCOUNT_SID"], secrets["TWILIO_AUTH_TOKEN"]
 )
 
+myDot.green()
+
 waiting_for_button()
 
 while True:
@@ -236,13 +262,14 @@ while True:
         cnt += 1
         print("---------------------------------------------")
         print("Button Pressed: {}".format(cnt))
-
+        # Turn dotstar red
+        myDot.red()
         # Get the current time from the Internet
         getTime = get_internet_time(requestObject)
         # Split the time on a period and take the first part
         currentTime = getTime.get_local_time()["datetime"].split(".")[0]
-        # Turn the blue led on
-        feathers2.led_set(True)
+        # Turn dotstar blue
+        myDot.blue()
         # Send the SMS
         sms.create(
             body=secrets["message"] + ": " + currentTime,
@@ -250,10 +277,8 @@ while True:
             to=secrets["NOTIFICATION_NUMBER"],
         )
         waiting_for_button()
+        myDot.green()
     time.sleep(0.1)
-    # turn the blue LED off
-    feathers2.led_set(False)
-
 
 # We should never hit this code
 print("done")  # Write your code here :-)
